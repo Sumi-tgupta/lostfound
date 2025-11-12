@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Lost & Found Management System</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <div class="nav-logo">
+                    <h1>Lost & Found</h1>
+                </div>
+                <div class="nav-menu" id="nav-user">
+                    <!-- Navigation will be populated by JavaScript -->
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="dashboard-header">
+            <h2>Lost & Found Dashboard</h2>
+            <div class="filter-tabs">
+                <button class="tab-btn active" data-filter="all">All Items</button>
+                <button class="tab-btn" data-filter="lost">Lost Items</button>
+                <button class="tab-btn" data-filter="found">Found Items</button>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search by item name, category, or location...">
+            <button id="searchBtn" class="btn btn-primary">Search</button>
+        </div>
+
+        <div class="items-grid" id="itemsGrid">
+            <!-- Items will be populated by JavaScript -->
+        </div>
+
+        <div class="no-results" id="noResults" style="display: none;">
+            <p>No items found matching your criteria.</p>
+        </div>
+    </main>
+
+    <div id="claimModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Claim This Item</h2>
+            <form id="claimForm">
+                <input type="hidden" id="claimFoundId" name="FoundID">
+                <div class="form-group">
+                    <label for="claimProof">Proof of Ownership</label>
+                    <textarea id="claimProof" name="proof" rows="4" required placeholder="Describe how you can prove this item belongs to you..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit Claim</button>
+                <div id="claimMessage" class="form-message"></div>
+            </form>
+        </div>
+    </div>
+
+    <script src="assets/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is logged in
+            requireLogin();
+            
+            // Initialize navigation
+            populateNav();
+            
+            let currentFilter = 'all';
+            let allItems = [];
+            
+            // Filter tabs
+            const filterTabs = document.querySelectorAll('.filter-tabs .tab-btn');
+            filterTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    filterTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentFilter = tab.getAttribute('data-filter');
+                    filterAndDisplayItems();
+                });
+            });
+            
+            // Search functionality
+            document.getElementById('searchBtn').addEventListener('click', filterAndDisplayItems);
+            document.getElementById('searchInput').addEventListener('keyup', function(e) {
+                if (e.key === 'Enter') {
+                    filterAndDisplayItems();
+                }
+            });
+            
+            // Modal functionality
+            const modal = document.getElementById('claimModal');
+            const closeBtn = document.querySelector('.close');
+            
+            closeBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+            
+            window.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+            
+            // Claim form submission
+            document.getElementById('claimForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const FoundID = document.getElementById('claimFoundId').value;
+                const proof = document.getElementById('claimProof').value;
+                
+                const response = await apiFetch('api/claim.php', 'POST', { FoundID, proof });
+                
+                if (response.ok && response.success) {
+                    showMessage('#claimMessage', 'Claim submitted successfully! Waiting for admin verification.', 'success');
+                    modal.style.display = 'none';
+                    document.getElementById('claimForm').reset();
+                    // Refresh items
+                    loadItems();
+                } else {
+                    showMessage('#claimMessage', response.error || 'Failed to submit claim', 'error');
+                }
+            });
+            
+            // Load items on page load
+            loadItems();
+            
+            // Functions
+            async function loadItems() {
+                const response = await apiFetch(`api/get_reports.php?type=${currentFilter}`);
+                
+                if (response.ok) {
+                    allItems = response.found || [];
+                    if (currentFilter === 'all' || currentFilter === 'lost') {
+                        allItems = [...allItems, ...(response.lost || [])];
+                    }
+                    filterAndDisplayItems();
+                } else {
+                    showMessage('#claimMessage', response.error || 'Failed to load items', 'error');
+                }
+            }
+            
+            function filterAndDisplayItems() {
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                let filteredItems = allItems;
+                
+                // Apply filter if not "all"
+                if (currentFilter !== 'all') {
+                    filteredItems = allItems.filter(item => {
+                        if (currentFilter === 'found') {
+                            return item.FoundID;
+                        } else {
+                            return item.LostID;
+                        }
+                    });
+                }
+                
+                // Apply search filter
+                if (searchTerm) {
+                    filteredItems = filteredItems.filter(item => 
+                        item.ItemName.toLowerCase().includes(searchTerm) ||
+                        item.Category.toLowerCase().includes(searchTerm) ||
+                        item.Location.toLowerCase().includes(searchTerm)
+                    );
+                }
+                
+                displayItems(filteredItems);
+            }
+            
+            function displayItems(items) {
+                const itemsGrid = document.getElementById('itemsGrid');
+                const noResults = document.getElementById('noResults');
+                
+                if (items.length === 0) {
+                    itemsGrid.innerHTML = '';
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                itemsGrid.innerHTML = items.map(item => {
+                    const isFound = !!item.FoundID;
+                    return `
+                        <div class="item-card ${isFound ? 'found' : 'lost'}">
+                            <div class="item-header">
+                                <h3>${item.ItemName}</h3>
+                                <span class="item-type ${isFound ? 'found' : 'lost'}">${isFound ? 'Found' : 'Lost'}</span>
+                            </div>
+                            <div class="item-details">
+                                <p><strong>Category:</strong> ${item.Category}</p>
+                                <p><strong>Location:</strong> ${item.Location}</p>
+                                <p><strong>Date:</strong> ${formatDate(item.ReportDate)}</p>
+                                <p><strong>Description:</strong> ${item.Description}</p>
+                                ${isFound ? `<p><strong>Found by:</strong> ${item.FinderName}</p>` : `<p><strong>Reported by:</strong> ${item.ReporterName}</p>`}
+                            </div>
+                            ${isFound ? `
+                                <button class="btn btn-secondary claim-btn" data-id="${item.FoundID}">Claim This Item</button>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+                
+                // Add event listeners to claim buttons
+                document.querySelectorAll('.claim-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const foundId = this.getAttribute('data-id');
+                        document.getElementById('claimFoundId').value = foundId;
+                        modal.style.display = 'block';
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>

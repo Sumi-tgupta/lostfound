@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lost & Found Management System</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <div class="nav-logo">
+                    <h1>Lost & Found</h1>
+                </div>
+                <div class="nav-menu" id="nav-user">
+                    <!-- Navigation will be populated by JavaScript -->
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="auth-container">
+            <div class="auth-tabs">
+                <button class="tab-btn active" data-tab="login">Login</button>
+                <button class="tab-btn" data-tab="register">Register</button>
+            </div>
+
+            <!-- Login Form -->
+            <div class="tab-content active" id="login-tab">
+                <form id="loginForm" class="auth-form">
+                    <h2>Welcome Back</h2>
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                    <div id="loginMessage" class="form-message"></div>
+                </form>
+            </div>
+
+            <!-- Register Form -->
+            <div class="tab-content" id="register-tab">
+                <form id="registerForm" class="auth-form">
+                    <h2>Create Account</h2>
+                    <div class="form-group">
+                        <label for="registerName">Full Name</label>
+                        <input type="text" id="registerName" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input type="email" id="registerEmail" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPhone">Phone Number</label>
+                        <input type="tel" id="registerPhone" name="phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerRole">Role</label>
+                        <select id="registerRole" name="role" required>
+                            <option value="Student">Student</option>
+                            <option value="Staff">Staff</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Register</button>
+                    <div id="registerMessage" class="form-message"></div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="assets/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is already logged in
+            const user = getCurrentUser();
+            if (user) {
+                // Check if there's a saved redirect location
+                const afterLogin = localStorage.getItem('afterLogin');
+                localStorage.removeItem('afterLogin');
+                window.location.href = afterLogin || 'dashboard.html';
+            }
+
+            // Initialize navigation
+            populateNav();
+
+            // Tab switching
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabId = btn.getAttribute('data-tab');
+                    
+                    // Update active tab button
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    // Update active tab content
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                });
+            });
+
+            // Login form submission
+            document.getElementById('loginForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+                
+                const response = await apiFetch('api/login.php', 'POST', { email, password });
+                
+                if (response.ok && response.success) {
+                    localStorage.setItem('user', JSON.stringify(response.user));
+                    showMessage('#loginMessage', 'Login successful! Redirecting...', 'success');
+                    
+                    // Check if there's a saved redirect location
+                    const afterLogin = localStorage.getItem('afterLogin');
+                    localStorage.removeItem('afterLogin');
+                    
+                    setTimeout(() => {
+                        window.location.href = afterLogin || 'dashboard.html';
+                    }, 1500);
+                } else {
+                    showMessage('#loginMessage', response.error || 'Login failed', 'error');
+                }
+            });
+
+            // Register form submission
+            document.getElementById('registerForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const name = document.getElementById('registerName').value;
+                const email = document.getElementById('registerEmail').value;
+                const phone = document.getElementById('registerPhone').value;
+                const password = document.getElementById('registerPassword').value;
+                const role = document.getElementById('registerRole').value;
+                
+                const response = await apiFetch('api/register.php', 'POST', { 
+                    name, email, phone, password, role 
+                });
+                
+                if (response.ok && response.success) {
+                    showMessage('#registerMessage', 'Registration successful! Please login.', 'success');
+                    // Switch to login tab
+                    document.querySelector('[data-tab="login"]').click();
+                    // Reset register form
+                    document.getElementById('registerForm').reset();
+                } else {
+                    showMessage('#registerMessage', response.error || 'Registration failed', 'error');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

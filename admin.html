@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Lost & Found Management System</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <div class="nav-logo">
+                    <h1>Lost & Found</h1>
+                </div>
+                <div class="nav-menu" id="nav-user">
+                    <!-- Navigation will be populated by JavaScript -->
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="admin-header">
+            <h2>Admin Dashboard</h2>
+            <div class="admin-stats">
+                <div class="stat-card">
+                    <h3>Total Lost Items</h3>
+                    <p id="totalLost">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Found Items</h3>
+                    <p id="totalFound">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Pending Claims</h3>
+                    <p id="pendingClaims">0</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-sections">
+            <div class="admin-section">
+                <h3>Pending Claims</h3>
+                <div class="claims-container" id="pendingClaimsContainer">
+                    <!-- Pending claims will be populated by JavaScript -->
+                </div>
+            </div>
+            
+            <div class="admin-section">
+                <h3>All Reports</h3>
+                <div class="reports-container" id="allReportsContainer">
+                    <!-- All reports will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="actionModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Take Action on Claim</h2>
+            <form id="actionForm">
+                <input type="hidden" id="actionClaimId" name="ClaimID">
+                <div class="form-group">
+                    <label for="actionType">Action</label>
+                    <select id="actionType" name="action" required>
+                        <option value="Verified">Verify Claim</option>
+                        <option value="Rejected">Reject Claim</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="actionRemarks">Remarks</label>
+                    <textarea id="actionRemarks" name="remarks" rows="4" required placeholder="Add remarks for this action..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit Action</button>
+                <div id="actionMessage" class="form-message"></div>
+            </form>
+        </div>
+    </div>
+
+    <script src="assets/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is logged in and is admin
+            const user = getCurrentUser();
+            if (!user) {
+                requireLogin();
+                return;
+            }
+            
+            if (user.Role !== 'Admin') {
+                showMessage('#actionMessage', 'Access denied. Admin privileges required.', 'error');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 2000);
+                return;
+            }
+            
+            // Initialize navigation
+            populateNav();
+            
+            // Modal functionality
+            const modal = document.getElementById('actionModal');
+            const closeBtn = document.querySelector('.close');
+            
+            closeBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+            
+            window.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+            
+            // Action form submission
+            document.getElementById('actionForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const ClaimID = document.getElementById('actionClaimId').value;
+                const action = document.getElementById('actionType').value;
+                const remarks = document.getElementById('actionRemarks').value;
+                
+                const response = await apiFetch('api/admin_action.php', 'POST', { ClaimID, action, remarks });
+                
+                if (response.ok && response.success) {
+                    showMessage('#actionMessage', `Claim ${action.toLowerCase()} successfully!`, 'success');
+                    modal.style.display = 'none';
+                    document.getElementById('actionForm').reset();
+                    // Refresh data
+                    loadAdminData();
+                } else {
+                    showMessage('#actionMessage', response.error || 'Failed to process action', 'error');
+                }
+            });
+            
+            // Load admin data on page load
+            loadAdminData();
+            
+            // Functions
+            async function loadAdminData() {
+                const response = await apiFetch('api/get_admin_data.php');
+                
+                if (response.ok) {
+                    const claims = response.claims || [];
+                    
+                    // Update stats
+                    document.getElementById('pendingClaims').textContent = claims.length;
+                    
+                    // Display pending claims
+                    displayPendingClaims(claims);
+                    
+                    // Load all reports
+                    loadAllReports();
+                } else {
+                    showMessage('#actionMessage', response.error || 'Failed to load admin data', 'error');
+                }
+            }
+            
+            async function loadAllReports() {
+                const response = await apiFetch('api/get_reports.php?type=all');
+                
+                if (response.ok) {
+                    const allReports = [
+                        ...(response.found || []).map(item => ({...item, Type: 'found'})),
+                        ...(response.lost || []).map(item => ({...item, Type: 'lost'}))
+                    ];
+                    
+                    // Update stats
+                    document.getElementById('totalLost').textContent = (response.lost || []).length;
+                    document.getElementById('totalFound').textContent = (response.found || []).length;
+                    
+                    // Display all reports
+                    displayAllReports(allReports);
+                } else {
+                    showMessage('#actionMessage', response.error || 'Failed to load reports', 'error');
+                }
+            }
+            
+            function displayPendingClaims(claims) {
+                const container = document.getElementById('pendingClaimsContainer');
+                
+                if (claims.length === 0) {
+                    container.innerHTML = '<p>No pending claims at the moment.</p>';
+                    return;
+                }
+                
+                container.innerHTML = claims.map(claim => `
+                    <div class="claim-card">
+                        <div class="claim-header">
+                            <h4>Claim for: ${claim.ItemName}</h4>
+                            <span class="claim-date">${formatDate(claim.ClaimDate)}</span>
+                        </div>
+                        <div class="claim-details">
+                            <p><strong>Claimant:</strong> ${claim.ClaimerName}</p>
+                            <p><strong>Proof:</strong> ${claim.ProofDetails}</p>
+                        </div>
+                        <div class="claim-actions">
+                            <button class="btn btn-primary action-btn" data-id="${claim.ClaimID}">Take Action</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Add event listeners to action buttons
+                document.querySelectorAll('.action-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const claimId = this.getAttribute('data-id');
+                        document.getElementById('actionClaimId').value = claimId;
+                        modal.style.display = 'block';
+                    });
+                });
+            }
+            
+            function displayAllReports(reports) {
+                const container = document.getElementById('allReportsContainer');
+                
+                if (reports.length === 0) {
+                    container.innerHTML = '<p>No reports found.</p>';
+                    return;
+                }
+                
+                container.innerHTML = reports.map(report => `
+                    <div class="report-card ${report.Type}">
+                        <div class="report-header">
+                            <h4>${report.ItemName}</h4>
+                            <span class="report-type ${report.Type}">${report.Type === 'lost' ? 'Lost' : 'Found'}</span>
+                        </div>
+                        <div class="report-details">
+                            <p><strong>Category:</strong> ${report.Category}</p>
+                            <p><strong>Location:</strong> ${report.Location}</p>
+                            <p><strong>Date:</strong> ${formatDate(report.ReportDate)}</p>
+                            <p><strong>Reported by:</strong> ${report.Type === 'found' ? report.FinderName : report.ReporterName}</p>
+                            <p><strong>Status:</strong> ${report.Status}</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Item - Lost & Found Management System</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <div class="nav-logo">
+                    <h1>Lost & Found</h1>
+                </div>
+                <div class="hamburger" id="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <div class="nav-menu" id="nav-user">
+                    <!-- Navigation will be populated by JavaScript -->
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="report-container">
+            <h2>Report an Item</h2>
+            
+            <div class="report-type-selector">
+                <button class="report-type-btn active" data-type="lost">I Lost Something</button>
+                <button class="report-type-btn" data-type="found">I Found Something</button>
+            </div>
+            
+            <form id="reportForm" class="report-form">
+                <input type="hidden" id="reportType" name="reportType" value="lost">
+                
+                <div class="form-group">
+                    <label for="itemName">Item Name</label>
+                    <input type="text" id="itemName" name="itemName" required placeholder="e.g., Black Wallet, iPhone 13">
+                </div>
+                
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category" required>
+                        <option value="">-- Select category --</option>
+                        <option value="Electronics">Electronics</option>
+                        <option value="Clothing">Clothing</option>
+                        <option value="Books">Books</option>
+                        <option value="Accessories">Accessories</option>
+                        <option value="Documents">Documents</option>
+                        <option value="Jewelry">Jewelry</option>
+                        <option value="Keys">Keys</option>
+                        <option value="Bags">Bags</option>
+                        <option value="Others">Others</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">Location</label>
+                    <input type="text" id="location" name="location" required placeholder="e.g., Library, Cafeteria, Room 203">
+                </div>
+                
+                <div class="form-group">
+                    <label for="reportDate">Date</label>
+                    <input type="date" id="reportDate" name="reportDate" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" rows="4" required placeholder="Provide a detailed description of the item..."></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Submit Report</button>
+                <div id="reportMessage" class="form-message"></div>
+            </form>
+        </div>
+    </main>
+
+    <script src="assets/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is logged in
+            requireLogin();
+            
+            // Initialize navigation
+            populateNav();
+            
+            // Set today's date as default
+            document.getElementById('reportDate').valueAsDate = new Date();
+            
+            // Report type selector
+            const reportTypeBtns = document.querySelectorAll('.report-type-btn');
+            reportTypeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    reportTypeBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.getElementById('reportType').value = btn.getAttribute('data-type');
+                });
+            });
+            
+            // First populate categories from API, then fallback to static options
+            loadCategories();
+            
+            // Report form submission
+            document.getElementById('reportForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const reportData = {
+                    reportType: document.getElementById('reportType').value,
+                    itemName: document.getElementById('itemName').value,
+                    category: document.getElementById('category').value,
+                    location: document.getElementById('location').value,
+                    reportDate: document.getElementById('reportDate').value,
+                    description: document.getElementById('description').value
+                };
+                
+                const response = await apiFetch('api/report.php', 'POST', reportData);
+                
+                if (response.ok && response.success) {
+                    showMessage('#reportMessage', 'Report submitted successfully!', 'success');
+                    document.getElementById('reportForm').reset();
+                    document.getElementById('reportDate').valueAsDate = new Date();
+                    // Reset report type to default
+                    document.querySelector('[data-type="lost"]').click();
+                } else {
+                    showMessage('#reportMessage', response.error || 'Failed to submit report', 'error');
+                }
+            });
+            
+            // Function to load categories
+            async function loadCategories() {
+                try {
+                    const response = await apiFetch('api/get_items.php?action=categories');
+                    
+                    if (response.ok && response.categories && response.categories.length > 0) {
+                        // Populate categories from API
+                        const categorySelect = document.getElementById('category');
+                        categorySelect.innerHTML = '<option value="">-- Select category --</option>';
+                        
+                        response.categories.forEach(category => {
+                            const option = document.createElement('option');
+                            option.value = category;
+                            option.textContent = category;
+                            categorySelect.appendChild(option);
+                        });
+                        
+                        console.log('Categories loaded from API:', response.categories);
+                    } else {
+                        console.log('Using fallback categories');
+                        // Keep the static fallback options already in HTML
+                    }
+                } catch (error) {
+                    console.error('Error loading categories:', error);
+                    console.log('Using fallback categories');
+                    // Keep the static fallback options already in HTML
+                }
+            }
+        });
+    </script>
+</body>
+</html>
