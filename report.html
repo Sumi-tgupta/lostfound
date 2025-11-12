@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Report Item - Lost & Found Management System</title>
     <link rel="stylesheet" href="assets/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
+    
     <header>
         <nav class="navbar">
             <div class="nav-container">
@@ -25,7 +30,7 @@
         </nav>
     </header>
 
-    <main class="container">
+    <main id="main-content" class="container page-transition">
         <div class="report-container">
             <h2>Report an Item</h2>
             
@@ -125,6 +130,8 @@
                     document.getElementById('reportDate').valueAsDate = new Date();
                     // Reset report type to default
                     document.querySelector('[data-type="lost"]').click();
+                    // Reload categories
+                    loadCategories();
                 } else {
                     showMessage('#reportMessage', response.error || 'Failed to submit report', 'error');
                 }
@@ -150,12 +157,12 @@
                         console.log('Categories loaded from API:', response.categories);
                     } else {
                         console.log('Using fallback categories');
-                        // Keep the static fallback options already in HTML
+                        // Keep static fallback options already in HTML
                     }
                 } catch (error) {
                     console.error('Error loading categories:', error);
                     console.log('Using fallback categories');
-                    // Keep the static fallback options already in HTML
+                    // Keep static fallback options already in HTML
                 }
             }
         });

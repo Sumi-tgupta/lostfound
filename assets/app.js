@@ -89,6 +89,47 @@ function showMessage(elem, message, type = 'info', duration = 4000) {
   }, duration);
 }
 
+/**
+ * showGlobalMessage - creates a toast notification for global messages
+ * message: string, type: 'success'|'error'|'info', duration: ms
+ */
+function showGlobalMessage(message, type = 'info', duration = 4000) {
+  // Create message container if it doesn't exist
+  let messageContainer = document.getElementById('global-message-container');
+  if (!messageContainer) {
+    messageContainer = document.createElement('div');
+    messageContainer.id = 'global-message-container';
+    messageContainer.style.position = 'fixed';
+    messageContainer.style.top = '80px';
+    messageContainer.style.right = '20px';
+    messageContainer.style.zIndex = '1001';
+    messageContainer.style.display = 'flex';
+    messageContainer.style.flexDirection = 'column';
+    messageContainer.style.gap = '10px';
+    document.body.appendChild(messageContainer);
+  }
+  
+  const messageElement = document.createElement('div');
+  messageElement.className = `form-message ${type}`;
+  messageElement.textContent = message;
+  messageElement.style.padding = '15px 20px';
+  messageElement.style.borderRadius = '8px';
+  messageElement.style.boxShadow = 'var(--shadow-lg)';
+  messageElement.style.maxWidth = '300px';
+  messageElement.style.animation = 'slideIn 0.3s ease-out';
+  
+  messageContainer.appendChild(messageElement);
+  
+  // Auto remove after duration
+  setTimeout(() => {
+    messageElement.style.opacity = '0';
+    setTimeout(() => {
+      if (messageElement.parentNode) {
+        messageElement.parentNode.removeChild(messageElement);
+      }
+    }, 300);
+  }, duration);
+}
 
 /**
  * populateCategorySelect - fetches categories and fills a <select> element
@@ -187,6 +228,41 @@ function populateNav() {
   }
   
   el.innerHTML = navHTML;
+  
+  // Add hamburger menu functionality for mobile
+  const hamburger = document.getElementById('hamburger');
+  if (hamburger) {
+    hamburger.addEventListener('click', function() {
+      el.classList.toggle('active');
+      
+      // Animate hamburger
+      const spans = hamburger.querySelectorAll('span');
+      if (el.classList.contains('active')) {
+        spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+        spans[1].style.opacity = '0';
+        spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+      } else {
+        spans[0].style.transform = 'none';
+        spans[1].style.opacity = '1';
+        spans[2].style.transform = 'none';
+      }
+    });
+  }
+  
+  // Close menu when clicking on a link (mobile)
+  const navLinks = el.querySelectorAll('.nav-link');
+  navLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      el.classList.remove('active');
+      const hamburger = document.getElementById('hamburger');
+      if (hamburger) {
+        const spans = hamburger.querySelectorAll('span');
+        spans[0].style.transform = 'none';
+        spans[1].style.opacity = '1';
+        spans[2].style.transform = 'none';
+      }
+    });
+  });
 }
 
 /** small escape to avoid injection into nav */
@@ -211,6 +287,7 @@ window.getCurrentUser = getCurrentUser;
 window.requireLogin = requireLogin;
 window.logout = logout;
 window.showMessage = showMessage;
+window.showGlobalMessage = showGlobalMessage;
 window.populateCategorySelect = populateCategorySelect;
 window.populateNav = populateNav;
 window.escapeHtml = escapeHtml;

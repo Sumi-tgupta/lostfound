@@ -5,13 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lost & Found Management System</title>
     <link rel="stylesheet" href="assets/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
+    
     <header>
         <nav class="navbar">
             <div class="nav-container">
                 <div class="nav-logo">
                     <h1>Lost & Found</h1>
+                </div>
+                <div class="hamburger" id="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
                 </div>
                 <div class="nav-menu" id="nav-user">
                     <!-- Navigation will be populated by JavaScript -->
@@ -20,7 +30,7 @@
         </nav>
     </header>
 
-    <main class="container">
+    <main id="main-content" class="container page-transition">
         <div class="auth-container">
             <div class="auth-tabs">
                 <button class="tab-btn active" data-tab="login">Login</button>
@@ -32,14 +42,14 @@
                 <form id="loginForm" class="auth-form">
                     <h2>Welcome Back</h2>
                     <div class="form-group">
-                        <label for="loginEmail">Email</label>
-                        <input type="email" id="loginEmail" name="email" required>
+                        <label for="loginEmail">Email Address</label>
+                        <input type="email" id="loginEmail" name="email" required placeholder="your.email@example.com">
                     </div>
                     <div class="form-group">
                         <label for="loginPassword">Password</label>
-                        <input type="password" id="loginPassword" name="password" required>
+                        <input type="password" id="loginPassword" name="password" required placeholder="Enter your password">
                     </div>
-                    <button type="submit" class="btn btn-primary">Login</button>
+                    <button type="submit" class="btn btn-primary">Sign In</button>
                     <div id="loginMessage" class="form-message"></div>
                 </form>
             </div>
@@ -50,29 +60,29 @@
                     <h2>Create Account</h2>
                     <div class="form-group">
                         <label for="registerName">Full Name</label>
-                        <input type="text" id="registerName" name="name" required>
+                        <input type="text" id="registerName" name="name" required placeholder="John Doe">
                     </div>
                     <div class="form-group">
-                        <label for="registerEmail">Email</label>
-                        <input type="email" id="registerEmail" name="email" required>
+                        <label for="registerEmail">Email Address</label>
+                        <input type="email" id="registerEmail" name="email" required placeholder="your.email@example.com">
                     </div>
                     <div class="form-group">
                         <label for="registerPhone">Phone Number</label>
-                        <input type="tel" id="registerPhone" name="phone" required>
+                        <input type="tel" id="registerPhone" name="phone" required placeholder="+1 (555) 123-4567">
                     </div>
                     <div class="form-group">
                         <label for="registerPassword">Password</label>
-                        <input type="password" id="registerPassword" name="password" required>
+                        <input type="password" id="registerPassword" name="password" required placeholder="Create a strong password">
                     </div>
                     <div class="form-group">
-                        <label for="registerRole">Role</label>
-                        <select id="registerRole" name="role" required>
-                            <option value="Student">Student</option>
-                            <option value="Staff">Staff</option>
-                            <option value="Admin">Admin</option>
-                        </select>
+                        <label>Account Type</label>
+                        <div class="role-display">
+                            <i class="role-icon">👤</i>
+                            <span>Student Account</span>
+                        </div>
+                        <input type="hidden" id="registerRole" name="role" value="Student">
                     </div>
-                    <button type="submit" class="btn btn-primary">Register</button>
+                    <button type="submit" class="btn btn-primary">Create Account</button>
                     <div id="registerMessage" class="form-message"></div>
                 </form>
             </div>
@@ -143,7 +153,7 @@
                 const email = document.getElementById('registerEmail').value;
                 const phone = document.getElementById('registerPhone').value;
                 const password = document.getElementById('registerPassword').value;
-                const role = document.getElementById('registerRole').value;
+                const role = document.getElementById('registerRole').value; // Always "Student"
                 
                 const response = await apiFetch('api/register.php', 'POST', { 
                     name, email, phone, password, role 

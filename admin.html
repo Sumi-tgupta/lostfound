@@ -5,13 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Lost & Found Management System</title>
     <link rel="stylesheet" href="assets/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
+    
     <header>
         <nav class="navbar">
             <div class="nav-container">
                 <div class="nav-logo">
                     <h1>Lost & Found</h1>
+                </div>
+                <div class="hamburger" id="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
                 </div>
                 <div class="nav-menu" id="nav-user">
                     <!-- Navigation will be populated by JavaScript -->
@@ -20,7 +30,7 @@
         </nav>
     </header>
 
-    <main class="container">
+    <main id="main-content" class="container page-transition">
         <div class="admin-header">
             <h2>Admin Dashboard</h2>
             <div class="admin-stats">
@@ -59,23 +69,30 @@
     <div id="actionModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Take Action on Claim</h2>
-            <form id="actionForm">
-                <input type="hidden" id="actionClaimId" name="ClaimID">
-                <div class="form-group">
-                    <label for="actionType">Action</label>
-                    <select id="actionType" name="action" required>
-                        <option value="Verified">Verify Claim</option>
-                        <option value="Rejected">Reject Claim</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="actionRemarks">Remarks</label>
-                    <textarea id="actionRemarks" name="remarks" rows="4" required placeholder="Add remarks for this action..."></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary">Submit Action</button>
-                <div id="actionMessage" class="form-message"></div>
-            </form>
+            <div class="modal-header">
+                <h2>Take Action on Claim</h2>
+            </div>
+            <div class="modal-body">
+                <form id="actionForm">
+                    <input type="hidden" id="actionClaimId" name="ClaimID">
+                    <div class="form-group">
+                        <label for="actionType">Action</label>
+                        <select id="actionType" name="action" required>
+                            <option value="Verified">Verify Claim</option>
+                            <option value="Rejected">Reject Claim</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="actionRemarks">Remarks</label>
+                        <textarea id="actionRemarks" name="remarks" rows="4" required placeholder="Add remarks for this action..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelAction">Cancel</button>
+                <button type="submit" form="actionForm" class="btn btn-primary">Submit Action</button>
+            </div>
+            <div id="actionMessage" class="form-message"></div>
         </div>
     </div>
 
@@ -90,7 +107,7 @@
             }
             
             if (user.Role !== 'Admin') {
-                showMessage('#actionMessage', 'Access denied. Admin privileges required.', 'error');
+                showGlobalMessage('Access denied. Admin privileges required.', 'error');
                 setTimeout(() => {
                     window.location.href = 'dashboard.html';
                 }, 2000);
@@ -103,14 +120,18 @@
             // Modal functionality
             const modal = document.getElementById('actionModal');
             const closeBtn = document.querySelector('.close');
+            const cancelBtn = document.getElementById('cancelAction');
             
-            closeBtn.addEventListener('click', () => {
+            const closeModal = () => {
                 modal.style.display = 'none';
-            });
+            };
+            
+            closeBtn.addEventListener('click', closeModal);
+            cancelBtn.addEventListener('click', closeModal);
             
             window.addEventListener('click', (e) => {
                 if (e.target === modal) {
-                    modal.style.display = 'none';
+                    closeModal();
                 }
             });
             
@@ -125,7 +146,7 @@
                 
                 if (response.ok && response.success) {
                     showMessage('#actionMessage', `Claim ${action.toLowerCase()} successfully!`, 'success');
-                    modal.style.display = 'none';
+                    closeModal();
                     document.getElementById('actionForm').reset();
                     // Refresh data
                     loadAdminData();
@@ -153,7 +174,7 @@
                     // Load all reports
                     loadAllReports();
                 } else {
-                    showMessage('#actionMessage', response.error || 'Failed to load admin data', 'error');
+                    showGlobalMessage(response.error || 'Failed to load admin data', 'error');
                 }
             }
             
@@ -173,7 +194,7 @@
                     // Display all reports
                     displayAllReports(allReports);
                 } else {
-                    showMessage('#actionMessage', response.error || 'Failed to load reports', 'error');
+                    showGlobalMessage(response.error || 'Failed to load reports', 'error');
                 }
             }
             
@@ -223,7 +244,7 @@
                     <div class="report-card ${report.Type}">
                         <div class="report-header">
                             <h4>${report.ItemName}</h4>
-                            <span class="report-type ${report.Type}">${report.Type === 'lost' ? 'Lost' : 'Found'}</span>
+                            <span class="item-type ${report.Type}">${report.Type === 'lost' ? 'Lost' : 'Found'}</span>
                         </div>
                         <div class="report-details">
                             <p><strong>Category:</strong> ${report.Category}</p>

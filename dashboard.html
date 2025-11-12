@@ -5,13 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Lost & Found Management System</title>
     <link rel="stylesheet" href="assets/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
+    
     <header>
         <nav class="navbar">
             <div class="nav-container">
                 <div class="nav-logo">
                     <h1>Lost & Found</h1>
+                </div>
+                <div class="hamburger" id="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
                 </div>
                 <div class="nav-menu" id="nav-user">
                     <!-- Navigation will be populated by JavaScript -->
@@ -20,7 +30,7 @@
         </nav>
     </header>
 
-    <main class="container">
+    <main id="main-content" class="container page-transition">
         <div class="dashboard-header">
             <h2>Lost & Found Dashboard</h2>
             <div class="filter-tabs">
@@ -47,16 +57,23 @@
     <div id="claimModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Claim This Item</h2>
-            <form id="claimForm">
-                <input type="hidden" id="claimFoundId" name="FoundID">
-                <div class="form-group">
-                    <label for="claimProof">Proof of Ownership</label>
-                    <textarea id="claimProof" name="proof" rows="4" required placeholder="Describe how you can prove this item belongs to you..."></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary">Submit Claim</button>
-                <div id="claimMessage" class="form-message"></div>
-            </form>
+            <div class="modal-header">
+                <h2>Claim This Item</h2>
+            </div>
+            <div class="modal-body">
+                <form id="claimForm">
+                    <input type="hidden" id="claimFoundId" name="FoundID">
+                    <div class="form-group">
+                        <label for="claimProof">Proof of Ownership</label>
+                        <textarea id="claimProof" name="proof" rows="4" required placeholder="Describe how you can prove this item belongs to you..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelClaim">Cancel</button>
+                <button type="submit" form="claimForm" class="btn btn-primary">Submit Claim</button>
+            </div>
+            <div id="claimMessage" class="form-message"></div>
         </div>
     </div>
 
@@ -94,14 +111,18 @@
             // Modal functionality
             const modal = document.getElementById('claimModal');
             const closeBtn = document.querySelector('.close');
+            const cancelBtn = document.getElementById('cancelClaim');
             
-            closeBtn.addEventListener('click', () => {
+            const closeModal = () => {
                 modal.style.display = 'none';
-            });
+            };
+            
+            closeBtn.addEventListener('click', closeModal);
+            cancelBtn.addEventListener('click', closeModal);
             
             window.addEventListener('click', (e) => {
                 if (e.target === modal) {
-                    modal.style.display = 'none';
+                    closeModal();
                 }
             });
             
@@ -115,7 +136,7 @@
                 
                 if (response.ok && response.success) {
                     showMessage('#claimMessage', 'Claim submitted successfully! Waiting for admin verification.', 'success');
-                    modal.style.display = 'none';
+                    closeModal();
                     document.getElementById('claimForm').reset();
                     // Refresh items
                     loadItems();
@@ -138,7 +159,7 @@
                     }
                     filterAndDisplayItems();
                 } else {
-                    showMessage('#claimMessage', response.error || 'Failed to load items', 'error');
+                    showGlobalMessage(response.error || 'Failed to load items', 'error');
                 }
             }
             
