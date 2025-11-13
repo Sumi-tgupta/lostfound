@@ -78,162 +78,87 @@
     </div>
 
     <script src="assets/app.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Check if user is logged in
-            requireLogin();
-            
-            // Initialize navigation
-            populateNav();
-            
-            let currentFilter = 'all';
-            let allItems = [];
-            
-            // Filter tabs
-            const filterTabs = document.querySelectorAll('.filter-tabs .tab-btn');
-            filterTabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    filterTabs.forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    currentFilter = tab.getAttribute('data-filter');
-                    filterAndDisplayItems();
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if user is already logged in
+        const user = getCurrentUser();
+        if (user) {
+            const afterLogin = localStorage.getItem('afterLogin');
+            localStorage.removeItem('afterLogin');
+            window.location.href = afterLogin || 'dashboard.html';
+        }
+
+        // Initialize navigation
+        populateNav();
+
+        // Tab switching
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.getAttribute('data-tab');
+                
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
                 });
+                document.getElementById(`${tabId}-tab`).classList.add('active');
             });
+        });
+
+        /* ------------------------------
+           LOGIN SUBMISSION (FIXED)
+        ------------------------------ */
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
             
-            // Search functionality
-            document.getElementById('searchBtn').addEventListener('click', filterAndDisplayItems);
-            document.getElementById('searchInput').addEventListener('keyup', function(e) {
-                if (e.key === 'Enter') {
-                    filterAndDisplayItems();
-                }
-            });
+            // FIXED: removed "api/"
+            const response = await apiFetch('login.php', 'POST', { email, password });
             
-            // Modal functionality
-            const modal = document.getElementById('claimModal');
-            const closeBtn = document.querySelector('.close');
-            const cancelBtn = document.getElementById('cancelClaim');
-            
-            const closeModal = () => {
-                modal.style.display = 'none';
-            };
-            
-            closeBtn.addEventListener('click', closeModal);
-            cancelBtn.addEventListener('click', closeModal);
-            
-            window.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    closeModal();
-                }
-            });
-            
-            // Claim form submission
-            document.getElementById('claimForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const FoundID = document.getElementById('claimFoundId').value;
-                const proof = document.getElementById('claimProof').value;
+            if (response.ok && response.success) {
+                localStorage.setItem('user', JSON.stringify(response.user));
+                showMessage('#loginMessage', 'Login successful! Redirecting...', 'success');
                 
-                const response = await apiFetch('api/claim.php', 'POST', { FoundID, proof });
+                const afterLogin = localStorage.getItem('afterLogin');
+                localStorage.removeItem('afterLogin');
                 
-                if (response.ok && response.success) {
-                    showMessage('#claimMessage', 'Claim submitted successfully! Waiting for admin verification.', 'success');
-                    closeModal();
-                    document.getElementById('claimForm').reset();
-                    // Refresh items
-                    loadItems();
-                } else {
-                    showMessage('#claimMessage', response.error || 'Failed to submit claim', 'error');
-                }
-            });
-            
-            // Load items on page load
-            loadItems();
-            
-            // Functions
-            async function loadItems() {
-                const response = await apiFetch(`api/get_reports.php?type=${currentFilter}`);
-                
-                if (response.ok) {
-                    allItems = response.found || [];
-                    if (currentFilter === 'all' || currentFilter === 'lost') {
-                        allItems = [...allItems, ...(response.lost || [])];
-                    }
-                    filterAndDisplayItems();
-                } else {
-                    showGlobalMessage(response.error || 'Failed to load items', 'error');
-                }
-            }
-            
-            function filterAndDisplayItems() {
-                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-                let filteredItems = allItems;
-                
-                // Apply filter if not "all"
-                if (currentFilter !== 'all') {
-                    filteredItems = allItems.filter(item => {
-                        if (currentFilter === 'found') {
-                            return item.FoundID;
-                        } else {
-                            return item.LostID;
-                        }
-                    });
-                }
-                
-                // Apply search filter
-                if (searchTerm) {
-                    filteredItems = filteredItems.filter(item => 
-                        item.ItemName.toLowerCase().includes(searchTerm) ||
-                        item.Category.toLowerCase().includes(searchTerm) ||
-                        item.Location.toLowerCase().includes(searchTerm)
-                    );
-                }
-                
-                displayItems(filteredItems);
-            }
-            
-            function displayItems(items) {
-                const itemsGrid = document.getElementById('itemsGrid');
-                const noResults = document.getElementById('noResults');
-                
-                if (items.length === 0) {
-                    itemsGrid.innerHTML = '';
-                    noResults.style.display = 'block';
-                    return;
-                }
-                
-                noResults.style.display = 'none';
-                
-                itemsGrid.innerHTML = items.map(item => {
-                    const isFound = !!item.FoundID;
-                    return `
-                        <div class="item-card ${isFound ? 'found' : 'lost'}">
-                            <div class="item-header">
-                                <h3>${item.ItemName}</h3>
-                                <span class="item-type ${isFound ? 'found' : 'lost'}">${isFound ? 'Found' : 'Lost'}</span>
-                            </div>
-                            <div class="item-details">
-                                <p><strong>Category:</strong> ${item.Category}</p>
-                                <p><strong>Location:</strong> ${item.Location}</p>
-                                <p><strong>Date:</strong> ${formatDate(item.ReportDate)}</p>
-                                <p><strong>Description:</strong> ${item.Description}</p>
-                                ${isFound ? `<p><strong>Found by:</strong> ${item.FinderName}</p>` : `<p><strong>Reported by:</strong> ${item.ReporterName}</p>`}
-                            </div>
-                            ${isFound ? `
-                                <button class="btn btn-secondary claim-btn" data-id="${item.FoundID}">Claim This Item</button>
-                            ` : ''}
-                        </div>
-                    `;
-                }).join('');
-                
-                // Add event listeners to claim buttons
-                document.querySelectorAll('.claim-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const foundId = this.getAttribute('data-id');
-                        document.getElementById('claimFoundId').value = foundId;
-                        modal.style.display = 'block';
-                    });
-                });
+                setTimeout(() => {
+                    window.location.href = afterLogin || 'dashboard.html';
+                }, 1500);
+            } else {
+                showMessage('#loginMessage', response.error || 'Login failed', 'error');
             }
         });
-    </script>
+
+        /* ------------------------------
+           REGISTER SUBMISSION (FIXED)
+        ------------------------------ */
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const phone = document.getElementById('registerPhone').value;
+            const password = document.getElementById('registerPassword').value;
+            const role = document.getElementById('registerRole').value; // Always "Student"
+            
+            // FIXED: removed "api/"
+            const response = await apiFetch('register.php', 'POST', { 
+                name, email, phone, password, role 
+            });
+            
+            if (response.ok && response.success) {
+                showMessage('#registerMessage', 'Registration successful! Please login.', 'success');
+                document.querySelector('[data-tab="login"]').click();
+                document.getElementById('registerForm').reset();
+            } else {
+                showMessage('#registerMessage', response.error || 'Registration failed', 'error');
+            }
+        });
+    });
+</script>
+
 </body>
 </html>
