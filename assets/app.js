@@ -10,7 +10,7 @@ const API_BASE = "http://localhost/lostfound/api/";
  * data: object for JSON body
  */
 async function apiFetch(endpoint, method = 'GET', data = null) {
-  const url = API_BASE + endpoint; // 🔥 Always use Localhost backend
+  const url = API_BASE + endpoint; // 🔥 Correct URL (no double /api/)
 
   const opts = { 
     method, 
@@ -212,4 +212,3 @@ window.populateCategorySelect = populateCategorySelect;
 window.populateNav = populateNav;
 window.escapeHtml = escapeHtml;
 window.formatDate = formatDate;
-
